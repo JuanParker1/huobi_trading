@@ -140,8 +140,8 @@ class Trader:
     def log_position(self, msg):
         cur_time = time.strftime(r"%Y%m%d_%H%M%S")
         print(cur_time, msg)
-        with open(self.log_file, "w+") as f:
-            f.write(f"{cur_time} {msg}")
+        with open(self.log_file, "a+") as f:
+            f.write(f"{cur_time} {msg}\n")
 
 
 if __name__ == "__main__":
