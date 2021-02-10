@@ -32,13 +32,15 @@ class Trader:
                                             secret_key=p_secret_key)
 
     def run(self):
+        i=0
         while True:
             if self.check_buy_condition():
                 self.buy()
             self.update_orders()
             time.sleep(5)
-            print("hello")
-            print(time.strftime(r"%Y%m%d_%H%M%S"))
+            i+=1
+            if i%10==0:
+                print(time.strftime(r"%Y%m%d_%H%M%S"), self.active_buy_orders)
 
     def check_buy_condition(self):
         if time.time() < self.last_buy_time + self.buy_cooling_time:
@@ -91,7 +93,7 @@ class Trader:
             order_state = order_obj.state
             if order_state == "filled":
                 sell_amount = (Decimal(
-                    order_obj.filled_amount) - Decimal(order_obj.filled_fees)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+                    order_obj.filled_amount) - Decimal(order_obj.filled_fees)).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
                 sell_price = (order_price*Decimal(1.03)
                               ).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
 
