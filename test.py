@@ -7,6 +7,8 @@ from huobi.client.wallet import WalletClient
 from huobi.client.account import AccountClient
 from huobi.constant import *
 from decimal import *
+import pickle
+import os
 
 
 class Trader:
@@ -15,6 +17,7 @@ class Trader:
         self.stock = 0
         self.history_data = []
         self.active_buy_orders = {}
+        self.active_buy_orders_file = "active_buy_orders.pkl"
         # Dict: order_id: order_id, client_order_id, order_price, time.time()
         self.order_price = Decimal(0)
         self.symbol = "btc3lusdt"
@@ -22,7 +25,7 @@ class Trader:
         self.account_id = 1037218
         self.client_order_id = 0
         self.last_buy_time = 0
-        self.buy_cooling_time = 30 # second
+        self.buy_cooling_time = 30  # second
         self.trade_client = TradeClient(
             api_key=p_api_key, secret_key=p_secret_key, init_log=True)
         self.market_client = MarketClient()
@@ -31,8 +34,12 @@ class Trader:
         self.account_client = AccountClient(api_key=p_api_key,
                                             secret_key=p_secret_key)
 
+        if os.path.exists(self.active_buy_orders_file):
+            with open(self.active_buy_orders_file, 'rb') as f:
+                self.active_buy_orders = pickle.load(f)
+
     def run(self):
-        i=0
+        i = 0
         while True:
             try:
                 if self.check_buy_condition():
@@ -41,8 +48,8 @@ class Trader:
             except Exception as e:
                 print(e)
             time.sleep(5)
-            i+=5
-            if i%10==0:
+            i += 5
+            if i % 10 == 0:
                 print(time.strftime(r"%Y%m%d_%H%M%S"), self.active_buy_orders)
 
     def check_buy_condition(self):
@@ -116,6 +123,9 @@ class Trader:
                 self.trade_client.cancel_order(self.symbol, order_id)
                 del self.active_buy_orders[order_id]
 
+        with open(self.active_buy_orders_file, 'wb') as f:
+            pickle.dump(self.active_buy_orders, f)
+
     def get_currency_balance(self, currency: str) -> str:
         balances = self.account_client.get_balance(1037218)
         for balance in balances:
@@ -132,6 +142,7 @@ class Trader:
         print(cur_time, msg)
         with open(self.log_file, "w+") as f:
             f.write(f"{cur_time} {msg}")
+
 
 if __name__ == "__main__":
     trader = Trader()
