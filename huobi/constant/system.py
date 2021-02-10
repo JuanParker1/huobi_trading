@@ -1,7 +1,7 @@
 
-HUOBI_URL_PRO = "https://api.huobi.pro"
-HUOBI_URL_VN = "https://api.huobi.vn"
-HUOBI_URL_SO = "https://api.huobi.so"
+HUOBI_URL_PRO = "https://api.huobi.be"
+HUOBI_URL_VN = "https://api.huobi.be"
+HUOBI_URL_SO = "https://api.huobi.be"
 
 
 HUOBI_WEBSOCKET_URI_PRO = "wss://api.hadax.com"

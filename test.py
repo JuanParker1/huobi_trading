@@ -34,11 +34,14 @@ class Trader:
     def run(self):
         i=0
         while True:
-            if self.check_buy_condition():
-                self.buy()
-            self.update_orders()
+            try:
+                if self.check_buy_condition():
+                    self.buy()
+                self.update_orders()
+            except Exception as e:
+                print(e)
             time.sleep(5)
-            i+=1
+            i+=5
             if i%10==0:
                 print(time.strftime(r"%Y%m%d_%H%M%S"), self.active_buy_orders)
 
