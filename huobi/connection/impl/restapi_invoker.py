@@ -9,8 +9,6 @@ from huobi.utils.print_mix_object import TypeCheck
 session = requests.Session()
 
 proxy = {
-  "http": "http://127.0.0.1:1080",
-  "https": "http://127.0.0.1:1080",
 }
 
 def check_response(dict_data):
