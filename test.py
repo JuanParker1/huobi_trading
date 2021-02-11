@@ -17,26 +17,25 @@ class Trader:
         self.stock = 0
         self.history_data = []
         self.active_buy_orders = {}
-        self.active_buy_orders_file = "active_buy_orders.pkl"
         # Dict: order_id: order_id, client_order_id, order_price, time.time()
+        self.client_order_id = 6
+        self.config_file = "config.pkl"
         self.order_price = Decimal(0)
         self.symbol = "btc3lusdt"
-        self.log_file = "trade_log.txt"
+        self.trade_log_file = "trade_log.txt"
+        self.run_log_file = "run_log.txt"
         self.account_id = 1037218
-        self.client_order_id = 0
         self.last_buy_time = 0
         self.buy_cooling_time = 30  # second
         self.trade_client = TradeClient(
             api_key=p_api_key, secret_key=p_secret_key, init_log=True)
         self.market_client = MarketClient()
-        self.wallet_client = WalletClient(
-            api_key=p_api_key, secret_key=p_secret_key)
         self.account_client = AccountClient(api_key=p_api_key,
                                             secret_key=p_secret_key)
 
-        if os.path.exists(self.active_buy_orders_file):
-            with open(self.active_buy_orders_file, 'rb') as f:
-                self.active_buy_orders = pickle.load(f)
+        if os.path.exists(self.config_file):
+            with open(self.config_file, 'rb') as f:
+                self.client_order_id, self.active_buy_orders = pickle.load(f)
 
     def run(self):
         i = 0
@@ -44,13 +43,16 @@ class Trader:
             try:
                 if self.check_buy_condition():
                     self.buy()
+            except Exception as e:
+                print(e)
+            try:
                 self.update_orders()
             except Exception as e:
                 print(e)
             time.sleep(5)
             i += 5
             if i % 10 == 0:
-                print(time.strftime(r"%Y%m%d_%H%M%S"), self.active_buy_orders)
+                self.run_log(f"{self.client_order_id} {self.active_buy_orders}")
 
     def check_buy_condition(self):
         if time.time() < self.last_buy_time + self.buy_cooling_time:
@@ -88,7 +90,7 @@ class Trader:
         order_id = self.trade_client.create_order(self.symbol, self.account_id, OrderType.BUY_LIMIT,
                                                   buy_amount, self.order_price, source=OrderSource.API,
                                                   client_order_id=str(self.client_order_id))
-        self.log_position(
+        self.trade_log(
             f"{order_id}: BUY ORDERED. BUY {buy_amount} at {self.order_price}")
         self.active_buy_orders[order_id] = [
             order_id, self.client_order_id, self.order_price, cur_timestamp]
@@ -107,7 +109,7 @@ class Trader:
                 sell_price = (order_price*Decimal(1.03)
                               ).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
 
-                self.log_position(
+                self.trade_log(
                     f"{order_id}: BUY SUCCEEDED. BUY {sell_amount} at {order_price}")
                 sell_order_id = self.trade_client.create_order(self.symbol, self.account_id, OrderType.SELL_LIMIT,
                                                                sell_amount, sell_price, source=OrderSource.API,
@@ -115,7 +117,7 @@ class Trader:
                                                                    self.client_order_id))
                 self.client_order_id += 1
 
-                self.log_position(
+                self.trade_log(
                     f"{sell_order_id}: SELL ORDERED. SELL {sell_amount} at {sell_price}")
                 del self.active_buy_orders[order_id]
 
@@ -123,8 +125,8 @@ class Trader:
                 self.trade_client.cancel_order(self.symbol, order_id)
                 del self.active_buy_orders[order_id]
 
-        with open(self.active_buy_orders_file, 'wb') as f:
-            pickle.dump(self.active_buy_orders, f)
+        with open(self.config_file, 'wb') as f:
+            pickle.dump((self.client_order_id, self.active_buy_orders), f)
 
     def get_currency_balance(self, currency: str) -> str:
         balances = self.account_client.get_balance(1037218)
@@ -137,11 +139,18 @@ class Trader:
             account_type="spot", valuation_currency="usd")
         return asset_valuation.balance
 
-    def log_position(self, msg):
+    def trade_log(self, msg):
         cur_time = time.strftime(r"%Y%m%d_%H%M%S")
         print(cur_time, msg)
-        with open(self.log_file, "a+") as f:
+        with open(self.trade_log_file, "a+") as f:
             f.write(f"{cur_time} {msg}\n")
+
+    def run_log(self, msg):
+        cur_time = time.strftime(r"%Y%m%d_%H%M%S")
+        print(cur_time, msg)
+        with open(self.run_log_file, "a+") as f:
+            f.write(f"{cur_time} {msg}\n")
+
 
 
 if __name__ == "__main__":
