@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from starlette.middleware.cors import CORSMiddleware
 import os
 
@@ -17,21 +18,32 @@ app.add_middleware(
     allow_headers=["*"])
 
 
-@app.get("/trade")
+def get_list_html(contents):
+    respond = "<ul>"
+    respond += "\n".join(["<li>" + s + "</li>" for s in contents])
+    respond += "</ul>"
+    respond += "<style> * { font-family: courier;}</style>"
+    return respond
+
+
+@app.get("/trade", response_class=HTMLResponse)
 async def trade():
     if os.path.exists(TRADE_LOG_FILE):
         with open(TRADE_LOG_FILE, 'r') as f:
-            content = f.read()
-        return content
+            content = f.readlines()
+            print(content)
+        return get_list_html(content)
     else:
         return None
 
-@app.get("/run")
+
+@app.get("/run", response_class=HTMLResponse)
 async def run():
     if os.path.exists(RUN_LOG_FILE):
         with open(RUN_LOG_FILE, 'r') as f:
             content = f.readlines()
-        return ''.join(content[-10:])
+            print(content)
+        return get_list_html(content[-10:])
     else:
         return None
 
