@@ -65,7 +65,7 @@ class Trader:
             price_sum += candlestick.close
         price_sum_average = price_sum / length
 
-        self.run_log(f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close} {price_sum_average*0.95}")
+        self.run_log(f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close} {price_sum_average:0.4f} {price_sum_average*0.95:0.4f}")
 
         if list_obj[0].close < price_sum_average*0.95:
             self.order_price = Decimal(list_obj[0].close)
