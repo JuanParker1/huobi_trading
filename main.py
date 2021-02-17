@@ -8,6 +8,7 @@ app = FastAPI()
 origins = ["*"]
 TRADE_LOG_FILE = "trade_log.txt"
 RUN_LOG_FILE = "run_log.txt"
+ERROR_LOG_FILE = "error_log.txt"
 
 
 app.add_middleware(
@@ -20,32 +21,31 @@ app.add_middleware(
 
 def get_list_html(contents):
     respond = "<ul>"
-    respond += "\n".join(["<li>" + s + "</li>" for s in contents])
+    respond += "".join(["<li>" + s + "</li>\n" for s in contents])
     respond += "</ul>"
-    respond += "<style> * { font-family: courier;}</style>"
     return respond
 
 
 @app.get("/trade", response_class=HTMLResponse)
 async def trade():
+    res = ""
+    res += "<h1>TRADE LOG</h1>"
     if os.path.exists(TRADE_LOG_FILE):
         with open(TRADE_LOG_FILE, 'r') as f:
-            content = f.readlines()
-            print(content)
-        return get_list_html(content)
-    else:
-        return None
-
-
-@app.get("/run", response_class=HTMLResponse)
-async def run():
+            trade_content = f.readlines()
+            res += get_list_html(trade_content)
+    res += "<h1>RUN LOG</h1>"
     if os.path.exists(RUN_LOG_FILE):
         with open(RUN_LOG_FILE, 'r') as f:
-            content = f.readlines()
-            print(content)
-        return get_list_html(content[-10:])
-    else:
-        return None
+            run_content = f.readlines()
+            res += get_list_html(run_content[-10:])
+    res += "<h1>ERROR LOG</h1>"
+    if os.path.exists(ERROR_LOG_FILE):
+        with open(ERROR_LOG_FILE, 'r') as f:
+            error_content = f.readlines()
+            res += get_list_html(error_content[-10:])
+    res += "<style> * {font-family: courier;}</style>"
+    return res
 
 if __name__ == "__main__":
     import uvicorn

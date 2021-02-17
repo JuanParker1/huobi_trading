@@ -24,9 +24,10 @@ class Trader:
         self.symbol = "btc3lusdt"
         self.trade_log_file = "trade_log.txt"
         self.run_log_file = "run_log.txt"
+        self.error_log_file = "error_log.txt"
         self.account_id = 1037218
         self.last_buy_time = 0
-        self.buy_cooling_time = 30  # second
+        self.buy_cooling_time = 0  # second
         self.trade_client = TradeClient(
             api_key=p_api_key, secret_key=p_secret_key, init_log=True)
         self.market_client = MarketClient()
@@ -38,24 +39,21 @@ class Trader:
                 self.client_order_id, self.active_buy_orders = pickle.load(f)
 
     def run(self):
-        i = 0
         while True:
             try:
                 if self.check_buy_condition():
                     self.buy()
             except Exception as e:
-                print(e)
+                self.error_log(str(e))
             try:
                 self.update_orders()
             except Exception as e:
-                print(e)
+                self.error_log(str(e))
             time.sleep(5)
-            i += 5
-            if i % 10 == 0:
-                self.run_log(f"{self.client_order_id} {self.active_buy_orders}")
 
     def check_buy_condition(self):
         if time.time() < self.last_buy_time + self.buy_cooling_time:
+            self.trade_log(f"TRY BUYING but in COLDTIME at {self.order_price}")
             return False
         interval = CandlestickInterval.MIN1
         length = 30
@@ -66,6 +64,8 @@ class Trader:
         for candlestick in list_obj[1:]:
             price_sum += candlestick.close
         price_sum_average = price_sum / length
+
+        self.run_log(f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close} {price_sum_average*0.95}")
 
         if list_obj[0].close < price_sum_average*0.95:
             self.order_price = Decimal(list_obj[0].close)
@@ -91,7 +91,7 @@ class Trader:
                                                   buy_amount, self.order_price, source=OrderSource.API,
                                                   client_order_id=str(self.client_order_id))
         self.trade_log(
-            f"{order_id}: BUY ORDERED. BUY {buy_amount} at {self.order_price}")
+            f"{order_id}: BUY ORDERED.   BUY {buy_amount} at {self.order_price}")
         self.active_buy_orders[order_id] = [
             order_id, self.client_order_id, self.order_price, cur_timestamp]
         self.client_order_id += 1
@@ -118,7 +118,7 @@ class Trader:
                 self.client_order_id += 1
 
                 self.trade_log(
-                    f"{sell_order_id}: SELL ORDERED. SELL {sell_amount} at {sell_price}")
+                    f"{sell_order_id}: SELL ORDERED.  SELL {sell_amount} at {sell_price}")
                 del self.active_buy_orders[order_id]
 
             elif cur_timestamp - order_cur_timestamp > waiting_limit:
@@ -129,7 +129,7 @@ class Trader:
             pickle.dump((self.client_order_id, self.active_buy_orders), f)
 
     def get_currency_balance(self, currency: str) -> str:
-        balances = self.account_client.get_balance(1037218)
+        balances = self.account_client.get_balance(self.account_id)
         for balance in balances:
             if balance.currency == currency and balance.type == "trade":
                 return balance.balance
@@ -149,6 +149,12 @@ class Trader:
         cur_time = time.strftime(r"%Y%m%d_%H%M%S")
         print(cur_time, msg)
         with open(self.run_log_file, "a+") as f:
+            f.write(f"{cur_time} {msg}\n")
+
+    def error_log(self, msg):
+        cur_time = time.strftime(r"%Y%m%d_%H%M%S")
+        print(cur_time, msg)
+        with open(self.error_log_file, "a+") as f:
             f.write(f"{cur_time} {msg}\n")
 
 
