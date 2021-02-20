@@ -1,5 +1,4 @@
 import time
-from tkinter import mainloop
 from huobi.privateconfig import p_api_key, p_secret_key
 from huobi.client.trade import TradeClient
 from huobi.client.market import MarketClient
@@ -78,6 +77,7 @@ class Trader:
         usdt_balance = Decimal(self.get_currency_balance("usdt"))
         min_order = Decimal(6)
         if usdt_balance < min_order:
+            self.trade_log(f"TRY BUYING but NO ENOUGH MONEY at {self.order_price}")
             return
         total_balance = Decimal(self.get_balance())
         buy_amount_usdt = max(min_order, min(
@@ -87,6 +87,7 @@ class Trader:
 
         cur_timestamp = int(time.time())
         self.last_buy_time = cur_timestamp
+        self.client_order_id += 1
         order_id = self.trade_client.create_order(self.symbol, self.account_id, OrderType.BUY_LIMIT,
                                                   buy_amount, self.order_price, source=OrderSource.API,
                                                   client_order_id=str(self.client_order_id))
@@ -94,7 +95,6 @@ class Trader:
             f"{order_id}: BUY ORDERED.   BUY {buy_amount} at {self.order_price}")
         self.active_buy_orders[order_id] = [
             order_id, self.client_order_id, self.order_price, cur_timestamp]
-        self.client_order_id += 1
 
     def update_orders(self):
         cur_timestamp = time.time()
@@ -111,11 +111,11 @@ class Trader:
 
                 self.trade_log(
                     f"{order_id}: BUY SUCCEEDED. BUY {sell_amount} at {order_price}")
+                self.client_order_id += 1
                 sell_order_id = self.trade_client.create_order(self.symbol, self.account_id, OrderType.SELL_LIMIT,
                                                                sell_amount, sell_price, source=OrderSource.API,
                                                                client_order_id=str(
                                                                    self.client_order_id))
-                self.client_order_id += 1
 
                 self.trade_log(
                     f"{sell_order_id}: SELL ORDERED.  SELL {sell_amount} at {sell_price}")
