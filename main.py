@@ -45,6 +45,7 @@ async def trade():
             error_content = f.readlines()
             res += get_list_html(error_content[-10:])
     res += "<style> * {font-family: courier;}</style>"
+    res += "<script>setTimeout(function(){ window.location.reload(1); }, 3000)</script>"
     return res
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ class Trader:
         self.error_log_file = "error_log.txt"
         self.account_id = 1037218
         self.last_buy_time = 0
-        self.buy_cooling_time = 0  # second
+        self.buy_cooling_time = 20  # second
         self.trade_client = TradeClient(
             api_key=p_api_key, secret_key=p_secret_key, init_log=True)
         self.market_client = MarketClient()
@@ -52,7 +52,7 @@ class Trader:
 
     def check_buy_condition(self):
         if time.time() < self.last_buy_time + self.buy_cooling_time:
-            self.trade_log(f"TRY BUYING but in COLDTIME at {self.order_price}")
+            self.trade_log(f"TRY BUYING but in COLDTIME at {self.order_price:0.4f}")
             return False
         interval = CandlestickInterval.MIN1
         length = 30
@@ -64,7 +64,7 @@ class Trader:
             price_sum += candlestick.close
         price_sum_average = price_sum / length
 
-        self.run_log(f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close} {price_sum_average:0.4f} {price_sum_average*0.95:0.4f}")
+        self.run_log(f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close:0.4f} {price_sum_average:0.4f} {price_sum_average*0.95:0.4f}")
 
         if list_obj[0].close < price_sum_average*0.95:
             self.order_price = Decimal(list_obj[0].close)
@@ -77,7 +77,7 @@ class Trader:
         usdt_balance = Decimal(self.get_currency_balance("usdt"))
         min_order = Decimal(6)
         if usdt_balance < min_order:
-            self.trade_log(f"TRY BUYING but NO ENOUGH MONEY at {self.order_price}")
+            self.trade_log(f"TRY BUYING but NO ENOUGH MONEY at {self.order_price:0.4f}")
             return
         total_balance = Decimal(self.get_balance())
         buy_amount_usdt = max(min_order, min(
