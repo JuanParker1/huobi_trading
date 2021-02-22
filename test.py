@@ -27,6 +27,7 @@ class Trader:
         self.account_id = 1037218
         self.last_buy_time = 0
         self.buy_cooling_time = 20  # second
+        self.cur_time = 0
         self.trade_client = TradeClient(
             api_key=p_api_key, secret_key=p_secret_key, init_log=True)
         self.market_client = MarketClient()
@@ -40,19 +41,22 @@ class Trader:
     def run(self):
         while True:
             try:
+                self.cur_time = int(time.time())
                 if self.check_buy_condition():
                     self.buy()
             except Exception as e:
                 self.error_log(str(e))
+            time.sleep(2)
             try:
                 self.update_orders()
             except Exception as e:
                 self.error_log(str(e))
-            time.sleep(5)
+            time.sleep(3)
 
     def check_buy_condition(self):
-        if time.time() < self.last_buy_time + self.buy_cooling_time:
-            self.trade_log(f"TRY BUYING but in COLDTIME at {self.order_price:0.4f}")
+        if self.cur_time < self.last_buy_time + self.buy_cooling_time:
+            self.trade_log(
+                f"TRY BUYING but in COLDTIME at {self.order_price:0.4f}")
             return False
         interval = CandlestickInterval.MIN1
         length = 30
@@ -64,7 +68,8 @@ class Trader:
             price_sum += candlestick.close
         price_sum_average = price_sum / length
 
-        self.run_log(f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close:0.4f} {price_sum_average:0.4f} {price_sum_average*0.95:0.4f}")
+        self.run_log(
+            f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close:0.4f} {price_sum_average:0.4f} {price_sum_average*0.95:0.4f}")
 
         if list_obj[0].close < price_sum_average*0.95:
             self.order_price = Decimal(list_obj[0].close)
@@ -77,7 +82,8 @@ class Trader:
         usdt_balance = Decimal(self.get_currency_balance("usdt"))
         min_order = Decimal(6)
         if usdt_balance < min_order:
-            self.trade_log(f"TRY BUYING but NO ENOUGH MONEY at {self.order_price:0.4f}")
+            self.trade_log(
+                f"TRY BUYING but NO ENOUGH MONEY at {self.order_price:0.4f}")
             return
         total_balance = Decimal(self.get_balance())
         buy_amount_usdt = max(min_order, min(
@@ -85,19 +91,23 @@ class Trader:
         buy_amount = (
             buy_amount_usdt/self.order_price).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
 
-        cur_timestamp = int(time.time())
-        self.last_buy_time = cur_timestamp
+        cur_timestamp = self.cur_time
         self.client_order_id += 1
-        order_id = self.trade_client.create_order(self.symbol, self.account_id, OrderType.BUY_LIMIT,
-                                                  buy_amount, self.order_price, source=OrderSource.API,
-                                                  client_order_id=str(self.client_order_id))
-        self.trade_log(
-            f"{order_id}: BUY ORDERED.   BUY {buy_amount} at {self.order_price}")
-        self.active_buy_orders[order_id] = [
-            order_id, self.client_order_id, self.order_price, cur_timestamp]
+        try:
+            order_id = self.trade_client.create_order(self.symbol, self.account_id, OrderType.BUY_LIMIT,
+                                                      buy_amount, self.order_price, source=OrderSource.API,
+                                                      client_order_id=str(self.client_order_id))
+            self.last_buy_time = cur_timestamp
+            self.trade_log(
+                f"{order_id}: BUY ORDERED.   BUY {buy_amount} at {self.order_price}")
+            self.active_buy_orders[order_id] = [
+                order_id, self.client_order_id, self.order_price, cur_timestamp]
+        except Exception as e:
+            self.trade_log(f"TRY BUYING but FAIL at {self.order_price:0.4f}")
+            raise(e)
 
     def update_orders(self):
-        cur_timestamp = time.time()
+        cur_timestamp = self.cur_time
         waiting_limit = 60*5
         for order_id in list(self.active_buy_orders):
             _, _, order_price, order_cur_timestamp = self.active_buy_orders[order_id]
@@ -110,16 +120,21 @@ class Trader:
                               ).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
 
                 self.trade_log(
-                    f"{order_id}: BUY SUCCEEDED. BUY {sell_amount} at {order_price}")
+                    f"{order_id}: BUY SUCCEEDED. BUY {sell_amount} at {order_price:0.4f}")
                 self.client_order_id += 1
-                sell_order_id = self.trade_client.create_order(self.symbol, self.account_id, OrderType.SELL_LIMIT,
-                                                               sell_amount, sell_price, source=OrderSource.API,
-                                                               client_order_id=str(
-                                                                   self.client_order_id))
+                try:
+                    sell_order_id = self.trade_client.create_order(self.symbol, self.account_id, OrderType.SELL_LIMIT,
+                                                                   sell_amount, sell_price, source=OrderSource.API,
+                                                                   client_order_id=str(
+                                                                       self.client_order_id))
 
-                self.trade_log(
-                    f"{sell_order_id}: SELL ORDERED.  SELL {sell_amount} at {sell_price}")
-                del self.active_buy_orders[order_id]
+                    self.trade_log(
+                        f"{sell_order_id}: SELL ORDERED.  SELL {sell_amount} at {sell_price:0.4f}")
+                    del self.active_buy_orders[order_id]
+                except Exception as e:
+                    self.trade_log(
+                        f"TRY SELLING but FAIL at ORDER: {order_id}")
+                    raise(e)
 
             elif cur_timestamp - order_cur_timestamp > waiting_limit:
                 self.trade_client.cancel_order(self.symbol, order_id)
@@ -140,23 +155,22 @@ class Trader:
         return asset_valuation.balance
 
     def trade_log(self, msg):
-        cur_time = time.strftime(r"%Y%m%d_%H%M%S")
+        cur_time = self.cur_time
         print(cur_time, msg)
         with open(self.trade_log_file, "a+") as f:
             f.write(f"{cur_time} {msg}\n")
 
     def run_log(self, msg):
-        cur_time = time.strftime(r"%Y%m%d_%H%M%S")
+        cur_time = self.cur_time
         print(cur_time, msg)
         with open(self.run_log_file, "a+") as f:
             f.write(f"{cur_time} {msg}\n")
 
     def error_log(self, msg):
-        cur_time = time.strftime(r"%Y%m%d_%H%M%S")
+        cur_time = self.cur_time
         print(cur_time, msg)
         with open(self.error_log_file, "a+") as f:
             f.write(f"{cur_time} {msg}\n")
-
 
 
 if __name__ == "__main__":

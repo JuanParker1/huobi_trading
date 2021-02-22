@@ -33,17 +33,17 @@ async def trade():
     if os.path.exists(TRADE_LOG_FILE):
         with open(TRADE_LOG_FILE, 'r') as f:
             trade_content = f.readlines()
-            res += get_list_html(trade_content)
+            res += get_list_html(trade_content[::-1])
     res += "<h1>RUN LOG</h1>"
     if os.path.exists(RUN_LOG_FILE):
         with open(RUN_LOG_FILE, 'r') as f:
             run_content = f.readlines()
-            res += get_list_html(run_content[-10:])
+            res += get_list_html(run_content[-10:][::-1])
     res += "<h1>ERROR LOG</h1>"
     if os.path.exists(ERROR_LOG_FILE):
         with open(ERROR_LOG_FILE, 'r') as f:
             error_content = f.readlines()
-            res += get_list_html(error_content[-10:])
+            res += get_list_html(error_content[-10:][::-1])
     res += "<style> * {font-family: courier;}</style>"
     res += "<script>setTimeout(function(){ window.location.reload(1); }, 3000)</script>"
     return res
@@ -51,4 +51,4 @@ async def trade():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app='main:app', host="0.0.0.0",
-                    port=8889, reload=True, debug=False)
+                    port=8889, reload=False, debug=False)
