@@ -1,4 +1,5 @@
 import time
+import datetime
 from huobi.privateconfig import p_api_key, p_secret_key
 from huobi.client.trade import TradeClient
 from huobi.client.market import MarketClient
@@ -72,7 +73,8 @@ class Trader:
             f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close:0.4f} {price_sum_average:0.4f} {price_sum_average*0.95:0.4f}")
 
         if list_obj[0].close < price_sum_average*0.95:
-            self.order_price = Decimal(list_obj[0].close).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
+            self.order_price = Decimal(list_obj[0].close).quantize(
+                Decimal('.0001'), rounding=ROUND_DOWN)
             return True
         else:
             return False
@@ -154,20 +156,23 @@ class Trader:
             account_type="spot", valuation_currency="usd")
         return asset_valuation.balance
 
-    def trade_log(self, msg):
-        cur_time = self.cur_time
+    def trade_log(self, msg: str):
+        cur_time = datetime.datetime.fromtimestamp(
+            self.cur_time).strftime(r"%Y%m%d_%H%M%S")
         print(cur_time, msg)
         with open(self.trade_log_file, "a+") as f:
             f.write(f"{cur_time} {msg}\n")
 
-    def run_log(self, msg):
-        cur_time = self.cur_time
+    def run_log(self, msg: str):
+        cur_time = datetime.datetime.fromtimestamp(
+            self.cur_time).strftime(r"%Y%m%d_%H%M%S")
         print(cur_time, msg)
         with open(self.run_log_file, "a+") as f:
             f.write(f"{cur_time} {msg}\n")
 
-    def error_log(self, msg):
-        cur_time = self.cur_time
+    def error_log(self, msg: str):
+        cur_time = datetime.datetime.fromtimestamp(
+            self.cur_time).strftime(r"%Y%m%d_%H%M%S")
         print(cur_time, msg)
         with open(self.error_log_file, "a+") as f:
             f.write(f"{cur_time} {msg}\n")
