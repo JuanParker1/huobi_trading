@@ -27,7 +27,7 @@ class Trader:
         self.error_log_file = "error_log.txt"
         self.account_id = 1037218
         self.last_buy_time = 0
-        self.buy_cooling_time = 20  # second
+        self.buy_cooling_time = 30  # second
         self.cur_time = 0
         self.trade_client = TradeClient(
             api_key=p_api_key, secret_key=p_secret_key, init_log=True)
