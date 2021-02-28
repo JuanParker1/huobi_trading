@@ -28,7 +28,7 @@ def get_list_html(contents):
 
 @app.get("/trade", response_class=HTMLResponse)
 async def trade():
-    res = "<script>setTimeout(function(){ window.location.reload(1); }, 5000)</script>"
+    res = "<style> * {font-family: courier;}</style>"
     res += "<h1>RUN LOG</h1>"
     if os.path.exists(RUN_LOG_FILE):
         with open(RUN_LOG_FILE, 'r') as f:
@@ -44,7 +44,7 @@ async def trade():
         with open(TRADE_LOG_FILE, 'r') as f:
             trade_content = f.readlines()
         res += get_list_html(trade_content[::-1])
-    res += "<style> * {font-family: courier;}</style>"
+    res += "<script>setTimeout(function(){ window.location.reload(1); }, 5000)</script>"
     return res
 
 if __name__ == "__main__":
