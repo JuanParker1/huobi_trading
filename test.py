@@ -80,16 +80,17 @@ class Trader:
     def buy(self):
         division = Decimal(10)
         self.update_balance()
-        usdt_balance = Decimal(self.get_currency_balance("usdt"))
+        usdt_avail_balance = Decimal(self.get_currency_balance("usdt"))
         min_order = Decimal(6)
-        if usdt_balance < min_order:
+        if usdt_avail_balance < min_order:
             self.trade_log(f"TRY BUYING but NO ENOUGH MONEY at {self.order_price:0.4f}")
             return
         symbol_balance = self.get_total_currency_balance(self.target_symbol)
         symbol_price = self.get_lastest_price(self.pair_symbol)
+        usdt_balance = self.get_total_currency_balance("usdt")
         total_balance = usdt_balance + symbol_balance * symbol_price
 
-        buy_amount_usdt = max(min_order, min(total_balance / division, usdt_balance))
+        buy_amount_usdt = max(min_order, min(total_balance / division, usdt_avail_balance))
         buy_amount = (buy_amount_usdt / self.order_price).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
 
         cur_timestamp = self.cur_time
