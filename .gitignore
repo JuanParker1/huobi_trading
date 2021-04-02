@@ -14,3 +14,6 @@ __pycache__
 ### Other ###
 .DS_Store
 .vscode
+*.csv
+*.pkl
+*.png
