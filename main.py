@@ -43,8 +43,8 @@ async def trade():
     if os.path.exists(TRADE_LOG_FILE):
         with open(TRADE_LOG_FILE, 'r') as f:
             trade_content = f.readlines()
-        res += get_list_html(trade_content[::-1])
-    res += "<script>setTimeout(function(){ window.location.reload(1); }, 5000)</script>"
+        res += get_list_html(trade_content[-200][::-1])
+    res += "<script>setTimeout(function(){ window.location.reload(1); }, 20000)</script>"
     return res
 
 if __name__ == "__main__":
