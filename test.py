@@ -52,7 +52,7 @@ class Trader:
                 self.update_orders()
             except Exception as e:
                 self.error_log(str(e))
-            time.sleep(3)
+            time.sleep(2)
 
     def check_buy_condition(self) -> bool:
         if self.cur_time < self.last_buy_time + self.buy_cooling_time:
@@ -71,7 +71,15 @@ class Trader:
             f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close:0.4f} " +
             f"{price_sum_average:0.4f} {price_sum_average*0.95:0.4f}")
 
+        buy_flag = False
+        if list_obj[-1].count != 0:
+            if price_sum_average - list_obj[0].close - max(list_obj[-2].count, list_obj[-1].count) > 0:
+                buy_flag = True
+
         if list_obj[0].close < price_sum_average * 0.95:
+            buy_flag = True
+
+        if buy_flag:
             self.order_price = Decimal(list_obj[0].close).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
             return True
         else:

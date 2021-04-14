@@ -8,6 +8,7 @@ import pickle
 from tqdm import tqdm
 from gplearn.genetic import SymbolicClassifier
 
+
 def get_prices(name: str) -> pd.DataFrame:
     # load a pkl file into a dataframe
     # columns: high low open close amount count vol timestamp
@@ -55,6 +56,8 @@ def make_return_series(prices, actions, init_cash, fee=0):
 
 
 def get_sharpe_from_minute(R_single_series: pd.Series) -> float:
+    if R_single_series.sum()==0:
+        return 0
     return R_single_series.mean() / R_single_series.std() * (365 * 24 * 60)**0.5
 
 
@@ -62,7 +65,7 @@ def get_turnover(prices: pd.Series, actions: pd.Series) -> float:
     return (abs(actions.diff().fillna(actions)).values * prices.values).sum()
 
 
-def plot_result(prices, actions, R_series, R_single_series, need_actions=True, diff_sharpe=True):
+def plot_result(prices, actions, R_series, R_single_series, init_cash=1, need_actions=True, diff_sharpe=True):
     """plot actions and returns of each time unit
 
     Args:
@@ -77,7 +80,7 @@ def plot_result(prices, actions, R_series, R_single_series, need_actions=True, d
         ax2 = ax.twinx()
         ax2.plot(prices.index.values, actions, label="action", color="orange")
     turnover = get_turnover(prices, actions)
-    pnl_over_turnover = R_series.iloc[-1] * prices[0] / turnover * 1000
+    pnl_over_turnover = R_series.iloc[-1] * init_cash / turnover * 1000
     # net earn = 1 - turnover/pnl * fee%
     if diff_sharpe:
         plt.title(f"sharpe: {get_sharpe_from_minute(R_series.diff())}, pot: {pnl_over_turnover}")
@@ -122,20 +125,20 @@ def plot_upper_lower_series(series: pd.Series, mean_period=5, std_period=60):
     plt.show()
 
 
-def multi_trade_backtest(name: str, func):
-    fee = 0.002
-    df = get_prices(name)
+def multi_trade_backtest(name: str, func, need_actions=False):
+    df = get_prices(name)["2021-3-1":]
 
     df_train = df.copy()
     prices = df_train["close"].copy()
     init_cash = prices[0] * 11
 
     actions = func(df_train)
-    R_series, R_single_series = make_return_series(prices, actions, init_cash, fee)
-    plot_result(prices, actions, R_series, R_single_series)
+    R_series, R_single_series = make_return_series(prices, actions, init_cash, fee=0)
+    plot_result(prices, actions, R_series, R_single_series, init_cash=init_cash,
+                need_actions=need_actions)
 
 
-def single_trade_backtest(name: str, func):
+def single_trade_backtest(name: str, func, need_actions=False):
     df = get_prices(name)
 
     df_train = df.copy()
@@ -143,8 +146,9 @@ def single_trade_backtest(name: str, func):
     init_cash = prices[0]
 
     actions = func(df_train)
-    R_series, R_single_series = make_return_series(prices, actions, init_cash)
-    plot_result(prices, actions, R_series, R_single_series, need_actions=False)
+    R_series, R_single_series = make_return_series(prices, actions, init_cash, fee=0)
+    plot_result(prices, actions, R_series, R_single_series, init_cash=init_cash,
+                need_actions=need_actions)
 
 
 def strategy_to_sharpe(name: str, func):
@@ -161,6 +165,6 @@ def strategy_to_sharpe(name: str, func):
 
 
 if __name__ == "__main__":
-    from strategy import test_strategy as strategy
-    NAME = "data/btc3lusdt_2021_04_02_00_35_24.pkl"
-    single_trade_backtest(NAME, strategy)
+    from strategy import low_close_rolling60_strategy as strategy
+    NAME = "data/btc3lusdt_2021_04_13_08_43_03.pkl"
+    multi_trade_backtest(NAME, strategy, need_actions=True)
