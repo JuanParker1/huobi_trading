@@ -20,10 +20,7 @@ app.add_middleware(
 
 
 def get_list_html(contents):
-    respond = "<ul>"
-    respond += "".join(["<li>" + s + "</li>\n" for s in contents])
-    respond += "</ul>"
-    return respond
+    return "<ul>" + "".join(["<li>" + s + "</li>\n" for s in contents]) + "</ul>"
 
 
 @app.get("/trade", response_class=HTMLResponse)
@@ -43,9 +40,22 @@ async def trade():
     if os.path.exists(TRADE_LOG_FILE):
         with open(TRADE_LOG_FILE, 'r') as f:
             trade_content = f.readlines()
-        res += get_list_html(trade_content[-200:][::-1])
+        res += get_list_html(trade_content[-400:][::-1])
     res += "<script>setTimeout(function(){ window.location.reload(1); }, 20000)</script>"
     return res
+
+
+@app.get("/run", response_class=HTMLResponse)
+async def trade():
+    res = "<style> * {font-family: courier;}</style>"
+    res += "<h1>RUN LOG</h1>"
+    if os.path.exists(RUN_LOG_FILE):
+        with open(RUN_LOG_FILE, 'r') as f:
+            run_content = f.readlines()
+        res += get_list_html(run_content[-2000:][::-1])
+    res += "<script>setTimeout(function(){ window.location.reload(1); }, 20000)</script>"
+    return res
+
 
 if __name__ == "__main__":
     import uvicorn

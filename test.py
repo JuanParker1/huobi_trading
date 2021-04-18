@@ -6,7 +6,7 @@ from huobi.client.market import MarketClient
 from huobi.client.wallet import WalletClient
 from huobi.client.account import AccountClient
 from huobi.constant import *
-from decimal import *
+from decimal import Decimal, ROUND_DOWN
 import pickle
 import os
 
@@ -23,12 +23,13 @@ class Trader:
         self.order_price = Decimal(0)
         self.target_symbol = "btc3l"
         self.pair_symbol = self.target_symbol + "usdt"
+        self.nav_pair_symbol = self.pair_symbol + "nav"
         self.trade_log_file = "trade_log.txt"
         self.run_log_file = "run_log.txt"
         self.error_log_file = "error_log.txt"
         self.account_id = 1037218
         self.last_buy_time = 0
-        self.buy_cooling_time = 60  # seconds
+        self.buy_cooling_time = 120  # seconds
         self.cur_time = 0
         self.trade_client = TradeClient(api_key=p_api_key, secret_key=p_secret_key, init_log=True)
         self.market_client = MarketClient()
@@ -67,20 +68,20 @@ class Trader:
             price_sum += candlestick.close
         price_sum_average = price_sum / length
 
+        nav_list_obj = self.market_client.get_candlestick(self.nav_pair_symbol, interval, 1)
+        min_price = min(nav_list_obj[0].close, list_obj[0].close)
+
+        signal1 = list_obj[-1].count != 0 and (
+            price_sum_average - min_price - max(list_obj[-2].count, list_obj[-1].count) > 0)
+
+        signal2 = min_price < price_sum_average * 0.96
+
         self.run_log(
-            f"{self.client_order_id} {self.active_buy_orders} {list_obj[0].close:0.4f} " +
-            f"{price_sum_average:0.4f} {price_sum_average*0.95:0.4f}")
+            f"{self.client_order_id} {self.active_buy_orders} {min_price:0.4f} " +
+            f"{price_sum_average:0.4f} {price_sum_average*0.96:0.4f} signal1={signal1} signal2={signal2}")
 
-        buy_flag = False
-        if list_obj[-1].count != 0:
-            if price_sum_average - list_obj[0].close - max(list_obj[-2].count, list_obj[-1].count) > 0:
-                buy_flag = True
-
-        if list_obj[0].close < price_sum_average * 0.95:
-            buy_flag = True
-
-        if buy_flag:
-            self.order_price = Decimal(list_obj[0].close).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
+        if signal1 or signal2:
+            self.order_price = Decimal(min_price).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
             return True
         else:
             return False
@@ -89,8 +90,8 @@ class Trader:
         division = Decimal(10)
         self.update_balance()
         usdt_avail_balance = Decimal(self.get_currency_balance("usdt"))
-        min_order = Decimal(6)
-        if usdt_avail_balance < min_order:
+        min_order_amount = Decimal(6)
+        if usdt_avail_balance < min_order_amount:
             self.trade_log(f"TRY BUYING but NO ENOUGH MONEY at {self.order_price:0.4f}")
             return
         symbol_balance = self.get_total_currency_balance(self.target_symbol)
@@ -98,7 +99,7 @@ class Trader:
         usdt_balance = self.get_total_currency_balance("usdt")
         total_balance = usdt_balance + symbol_balance * symbol_price
 
-        buy_amount_usdt = max(min_order, min(total_balance / division, usdt_avail_balance))
+        buy_amount_usdt = max(min_order_amount, min(total_balance / division, usdt_avail_balance))
         buy_amount = (buy_amount_usdt / self.order_price).quantize(Decimal('.0001'), rounding=ROUND_DOWN)
 
         cur_timestamp = self.cur_time
