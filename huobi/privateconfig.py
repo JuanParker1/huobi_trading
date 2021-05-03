@@ -1,2 +1,2 @@
-p_api_key = "ghjrgrft5g-5412fc76-6f188773-44025"
-p_secret_key = "734afbd5-cd105472-dc81a1d2-662d4"
+p_api_key = "mjlpdje3ld-5ecf4221-68b92dda-0f5ac"
+p_secret_key = "9fa76fe9-43d09505-efd434b0-7371a"
