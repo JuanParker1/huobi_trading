@@ -142,9 +142,15 @@ class Trader:
                     raise(e)
 
             elif cur_timestamp - order_cur_timestamp > waiting_limit:
-                self.trade_client.cancel_order(self.pair_symbol, order_id)
-                self.trade_log(f"CANCEL BUYING at {self.order_price:0.4f}")
-                del self.active_buy_orders[order_id]
+                try:
+                    self.trade_client.cancel_order(self.pair_symbol, order_id)
+                    self.trade_log(f"CANCEL BUYING at {self.order_price:0.4f}")
+                except Exception as e:
+                    self.trade_log(f"TRY CANCEL but FAIL at ORDER: {order_id}")
+                order_obj = self.trade_client.get_order(order_id=order_id)
+                order_state = order_obj.state
+                if order_state != "submitted" and order_state != "created":
+                    del self.active_buy_orders[order_id]
 
         with open(self.config_file, 'wb') as f:
             pickle.dump((self.client_order_id, self.active_buy_orders), f)
